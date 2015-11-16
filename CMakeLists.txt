@@ -329,6 +329,9 @@ set(LMTEST_HYPO_SRC
         moses/AlignmentInfo.h
         moses/AlignmentInfo.cpp
         
+    moses/Bitmaps.h
+    moses/Bitmaps.cpp
+        
     ${LMTEST_COMMON_SRC}
 )
 

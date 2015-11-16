@@ -25,8 +25,10 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include <utility>
 
 #include "moses/LM/Ken.h"
+#include "moses/Bitmaps.h"
 #include "lm/model.hh"
 
 #include "LMTestArpa.h"
@@ -47,6 +49,17 @@ namespace tt = boost::test_tools;
 
 using namespace Moses;
 
+/*
+typedef std::pair<size_t, size_t> Align;
+typedef std::pair<std::string, Align> PhraseAlign;
+*/
+
+struct PhraseAlign {
+  std::string targetWords;
+  Range sourceRange;
+
+  PhraseAlign(std::string _targetWords, Range _sourceRange): targetWords(_targetWords), sourceRange(_sourceRange) {}
+};
 
 BOOST_AUTO_TEST_SUITE(LMTestHypothesisSuite)
 
@@ -89,6 +102,33 @@ public:
     m_lm = new LanguageModelKen<lm::ngram::ProbingModel>(line, file, factorType, lazy);
   }
 
+  void testHypothesis(const Sentence& source, const std::vector<PhraseAlign>& phrases) {
+    Hypothesis *hypo = NULL;
+    size_t nhypo = 0;
+
+    // vector<bool> source.m_sourceCompleted
+    BOOST_CHECK(source.m_sourceCompleted.empty());
+    Bitmaps bitmaps(source.GetSize(), source.m_sourceCompleted);
+    Manager &noMan = *static_cast<Manager *>(NULL);
+    TranslationOption initialTransOpt;
+
+    const Bitmap &initialBitmap = bitmaps.GetInitialBitmap();
+    hypo = new Hypothesis(noMan, source, initialTransOpt, initialBitmap, /* id = */ ++nhypo);
+
+    for(auto pa: phrases) {
+      Hypothesis* prevHypo = hypo;
+      // add sourceRange to coverage of previous Hypothesis
+      const Bitmap &bitmap = bitmaps.GetBitmap(prevHypo->GetWordsBitmap(), pa.sourceRange);
+
+      TargetPhrase targetPhrase;
+      targetPhrase.CreateFromString(Input, m_factorOrder, pa.targetWords, NULL);
+
+      TranslationOption translationOption(pa.sourceRange, targetPhrase);
+
+      hypo = new Hypothesis(*prevHypo, translationOption, bitmap, /* id = */ ++nhypo);
+    }
+  }
+
   ~KenLMFixture() {
     delete m_lm;
   }
@@ -97,6 +137,23 @@ protected:
   LanguageModel *m_lm; ///< Used by every BOOST_FIXTURE_TEST_CASE below.
   std::vector<FactorType> m_factorOrder; ///< indices of factors in each token, delimited by | (e.g. "surface|POS")
 };
+
+BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
+  std::vector<PhraseAlign> phrases;
+
+  Sentence sentence;
+  sentence.CreateFromString(m_factorOrder, "sjohn sgave smary sa sbook s.");
+
+  phrases.push_back(PhraseAlign("john", Range(0, 0)));
+  phrases.push_back(PhraseAlign("gave", Range(1, 1)));
+  phrases.push_back(PhraseAlign("mary", Range(2, 2)));
+  phrases.push_back(PhraseAlign("a book", Range(3, 4)));
+  phrases.push_back(PhraseAlign(".", Range(5, 5)));
+
+  testHypothesis(sentence, phrases);
+
+  std::cout << "created Hypothesis chain" << std::endl;
+}
 
 BOOST_FIXTURE_TEST_CASE(TestHypothesis, KenLMFixture) {
   std::vector<std::string> phraseStrings;
