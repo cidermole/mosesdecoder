@@ -1,0 +1,45 @@
+# Just included for reference, this file is not currently used anywhere.
+# See LMTestArpa.cpp which includes a copy of this.
+
+\data\
+ngram 1=15
+ngram 2=18
+
+\1-grams:
+-1.431	she	-0.100
+-1.431	different	-0.100
+-1.255	book	-0.100
+-1.130	read	-0.100
+-1.130	.	-0.100
+-1.431	mary	-0.200
+-1.431	dick	-0.100
+-1.255	a	-0.100
+-1.431	moby	-0.100
+-1.431	cher	-0.100
+-1.130	<s>	-0.100
+-1.130	</s>	-0.100
+-1.431	john	-0.100
+-1.431	by	-0.100
+-1.732	<UNK>	-0.100
+
+\2-grams:
+-1.243	a different
+-1.230	john read
+-1.243	book .
+-1.230	cher .
+-1.255	<s> she
+-0.954	. </s>
+-1.243	book by
+-1.230	different book
+-1.230	moby dick
+-1.243	a book
+-1.230	dick .
+-1.230	she read
+-1.230	mary read
+-1.255	<s> john
+-1.255	read moby
+-1.079	read a
+-1.230	by cher
+-1.255	<s> mary
+
+\end\
