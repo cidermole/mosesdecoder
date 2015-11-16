@@ -14,8 +14,8 @@ namespace Moses
 
 TargetPhrase::TargetPhrase(const PhraseDictionary *pt)
     :Phrase()
-    , m_fullScore(0.0)
     , m_futureScore(0.0)
+    , m_estimatedScore(0.0)
     , m_alignTerm(NULL)
     , m_alignNonTerm(NULL)
     , m_lhsTarget(NULL)
@@ -27,8 +27,8 @@ TargetPhrase::TargetPhrase(const PhraseDictionary *pt)
 TargetPhrase::TargetPhrase(const TargetPhrase &copy)
     : Phrase(copy)
     , m_cached_scores(copy.m_cached_scores)
-    , m_fullScore(copy.m_fullScore)
     , m_futureScore(copy.m_futureScore)
+    , m_estimatedScore(copy.m_estimatedScore)
     , m_scoreBreakdown(copy.m_scoreBreakdown)
     , m_alignTerm(copy.m_alignTerm)
     , m_alignNonTerm(copy.m_alignNonTerm)
@@ -77,8 +77,8 @@ void TargetPhrase::EvaluateWithSourceContext(const InputType &input, const Input
     }
   }
   float weightedScore = m_scoreBreakdown.GetWeightedScore();
-  m_futureScore += futureScoreBreakdown.GetWeightedScore();
-  m_fullScore = weightedScore + m_futureScore;
+  m_estimatedScore += futureScoreBreakdown.GetWeightedScore();
+  m_futureScore = weightedScore + m_estimatedScore;
 }
 
 TargetPhrase::~TargetPhrase()
@@ -110,7 +110,7 @@ std::ostream& operator<<(std::ostream& os, const TargetPhrase& tp)
   os << tp.GetAlignNonTerm() << flush;
   os << ": term=" << tp.GetAlignTerm() << flush;
   os << ": nonterm=" << tp.GetAlignNonTerm() << flush;
-  os << ": c=" << tp.m_fullScore << flush;
+  os << ": c=" << tp.m_futureScore << flush;
   os << " " << tp.m_scoreBreakdown << flush;
 
   const Phrase *sourcePhrase = tp.GetRuleSource();

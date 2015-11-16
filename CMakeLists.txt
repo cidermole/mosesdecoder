@@ -248,6 +248,8 @@ set(MOSES_OPTIONS_SRC
     moses/parameters/NBestOptions.h                                                           
     moses/parameters/OptionsBaseClass.cpp                                                     
     moses/parameters/OptionsBaseClass.h                                                       
+    moses/parameters/OOVHandlingOptions.cpp
+    moses/parameters/OOVHandlingOptions.h
     moses/parameters/ReorderingOptions.cpp                                                    
     moses/parameters/ReorderingOptions.h                                                      
     moses/parameters/ReportingOptions.cpp                                                     

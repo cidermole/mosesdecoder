@@ -70,7 +70,7 @@ CreateFromString(vector<FactorType> const& FOrder, string const& phraseString)
 
 // why these below?
 
-std::vector <ChartTranslationOptions*> Sentence::GetXmlChartTranslationOptions() const
+std::vector <ChartTranslationOptions*> Sentence::GetXmlChartTranslationOptions(AllOptions const& opts) const
 {
   assert(false);
   return std::vector <ChartTranslationOptions*>();

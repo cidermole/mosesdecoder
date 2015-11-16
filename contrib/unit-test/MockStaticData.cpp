@@ -5,6 +5,7 @@
  ****************************************************/
 
 #include "MockStaticData.h"
+#include "moses/parameters/OOVHandlingOptions.h"
 
 namespace Moses
 {
@@ -25,5 +26,17 @@ PhrasePropertyFactory::~PhrasePropertyFactory() {}
 ContextParameters::ContextParameters() {}
 
 InputOptions::InputOptions() {}
+
+// mock options
+
+OOVHandlingOptions::
+OOVHandlingOptions()
+{
+  drop = false;
+  mark = false;
+  prefix = "UNK";
+  suffix = "";
+}
+
 
 }
