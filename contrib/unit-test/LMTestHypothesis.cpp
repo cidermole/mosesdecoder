@@ -102,7 +102,7 @@ public:
     m_lm = new LanguageModelKen<lm::ngram::ProbingModel>(line, file, factorType, lazy);
   }
 
-  void testHypothesis(const Sentence& source, const std::vector<PhraseAlign>& phrases) {
+  Hypothesis* hypoChain(const Sentence& source, const std::vector<PhraseAlign>& phrases) {
     Hypothesis *hypo = NULL;
     size_t nhypo = 0;
 
@@ -127,6 +127,8 @@ public:
 
       hypo = new Hypothesis(*prevHypo, translationOption, bitmap, /* id = */ ++nhypo);
     }
+
+    return hypo;
   }
 
   ~KenLMFixture() {
@@ -141,18 +143,39 @@ protected:
 BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   std::vector<PhraseAlign> phrases;
 
-  Sentence sentence;
-  sentence.CreateFromString(m_factorOrder, "sjohn sgave smary sa sbook s.");
+  Sentence source;
+  source.CreateFromString(m_factorOrder, "sjohn sgave smary sa sbook s.");
 
+  // target phrases, with source word range
   phrases.push_back(PhraseAlign("john", Range(0, 0)));
   phrases.push_back(PhraseAlign("gave", Range(1, 1)));
   phrases.push_back(PhraseAlign("mary", Range(2, 2)));
   phrases.push_back(PhraseAlign("a book", Range(3, 4)));
   phrases.push_back(PhraseAlign(".", Range(5, 5)));
 
-  testHypothesis(sentence, phrases);
+  Hypothesis *lastHypo = hypoChain(source, phrases);
 
   std::cout << "created Hypothesis chain" << std::endl;
+
+  /*
+   * Evaluate feature function
+   */
+  const StatefulFeatureFunction &ff = *m_lm;
+  // SCC registration done in LanguageModel constructor. Only once - static!
+  //ScoreComponentCollection::RegisterScoreProducer(&ff);
+
+  ScoreComponentCollection scoreBreakdown;
+
+  // ffIndex is usually from the order of registration in StatefulFeatureFunction
+  const size_t ffIndex = 0;
+  FFState const* prevState = lastHypo->GetPrevHypo() ? lastHypo->GetPrevHypo()->GetFFState(ffIndex) : NULL;
+  FFState *curState = ff.EvaluateWhenApplied(*lastHypo, prevState, &scoreBreakdown);
+  lastHypo->SetFFState(ffIndex, curState);
+
+  // what happens if no state for previous Hypothesis computed yet?
+  std::cout << "FF evaluated. Score: " << scoreBreakdown.GetScoreForProducer(&ff) << std::endl;
+
+  // Moses::Factor::GetId() segfault.
 }
 
 BOOST_FIXTURE_TEST_CASE(TestHypothesis, KenLMFixture) {
