@@ -6,6 +6,32 @@
 
 BJAM=$(dirname $0)/bjam
 
+######
+
+# From the finished source crawl, produce some statistics
+# (such as the number of users of header files)
+#
+function source_stats() {
+	# source_stats $LIST_TMP_DIR $ABS_SRC
+	LIST_TMP_DIR="$1"
+	ABS_SRC="$2"
+
+	find $LIST_TMP_DIR/headers -type f -exec cat {} \; | sed '/^\/usr/d' | awk '{gsub("^'$ABS_SRC'/", ""); print;}' | sort | uniq > $LIST_TMP_DIR/sources-and-headers.txt
+	awk '!/(\.cpp|\.cc)/' $LIST_TMP_DIR/sources-and-headers.txt > $LIST_TMP_DIR/headers.txt
+
+	pushd $LIST_TMP_DIR/headers >/dev/null
+	while read header; do
+		nusages=$(grep -rl $header . | wc -l)
+		echo "$nusages $header"
+	done < $LIST_TMP_DIR/headers.txt > $LIST_TMP_DIR/header-usage.txt
+	popd >/dev/null
+
+	sort -n -r $LIST_TMP_DIR/header-usage.txt > $LIST_TMP_DIR/header-usage.sorted.txt
+	mv $LIST_TMP_DIR/header-usage.sorted.txt $LIST_TMP_DIR/header-usage.txt
+}
+
+######
+
 if [ "$(basename $0)" == "g++" ]; then
 	# we are individual g++ wrapper
 
@@ -56,7 +82,7 @@ if [ "$(basename $0)" == "g++" ]; then
 			eval $ORIG_CPP -M $arglist | xargs ls -1 2>&- >> $headers
 
 			# post-process a bit (remove /usr)
-			sed '/^\/usr/d' $headers > ${headers}.nousr
+			#sed '/^\/usr/d' $headers > ${headers}.nousr
 
 			# note: always has the cpp itself.
 		fi
@@ -88,7 +114,12 @@ else
 
 	# post-process
 	sort $LIST_TMP_DIR/sources.txt | uniq > $LIST_TMP_DIR/sources.uniq.txt
+	mv $LIST_TMP_DIR/sources.uniq.txt $LIST_TMP_DIR/sources.txt
 
-	echo >&2 "Collected list of source files in $LIST_TMP_DIR/sources.uniq.txt"
+	# produce nice stats
+	source_stats $LIST_TMP_DIR $ABS_SRC
+
+	echo >&2 "Collected list of cpp/cc source files in $LIST_TMP_DIR/sources.txt"
 	exit $result
 fi
+
