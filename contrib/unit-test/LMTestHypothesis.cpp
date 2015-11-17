@@ -49,10 +49,6 @@ namespace tt = boost::test_tools;
 
 using namespace Moses;
 
-/*
-typedef std::pair<size_t, size_t> Align;
-typedef std::pair<std::string, Align> PhraseAlign;
-*/
 
 struct PhraseAlign {
   std::string targetWords;
@@ -104,12 +100,21 @@ public:
     m_lm = new LanguageModelKen<lm::ngram::ProbingModel>(line, file, factorType, lazy);
   }
 
-  std::vector<Hypothesis *> hypoChain(const Sentence& source, const std::vector<PhraseAlign>& phrases) {
+  /**
+   * Construct a chain of Hypotheses like done in phrase-based stack decoding (see SearchNormal).
+   *
+   * \param source        source words
+   * \param targetPhrases sequence of target phrases and their alignment to source word ranges
+   *
+   * \return Entire chain of Hypotheses from the empty Hypothesis to the last phrase.
+   */
+  std::vector<Hypothesis *> hypoChain(const Sentence& source, const std::vector<PhraseAlign>& targetPhrases) {
     std::vector<Hypothesis *> hypotheses;
     Hypothesis *hypo = NULL;
     size_t nhypo = 0;
 
     // vector<bool> source.m_sourceCompleted
+    // source words already covered before we even got started. Why would anybody want to specify these?
     BOOST_CHECK(source.m_sourceCompleted.empty());
     Bitmaps bitmaps(source.GetSize(), source.m_sourceCompleted);
     Manager &noMan = *static_cast<Manager *>(NULL);
@@ -122,7 +127,7 @@ public:
     hypo = new Hypothesis(noMan, source, initialTransOpt, initialBitmap, /* id = */ ++nhypo);
     hypotheses.push_back(hypo);
 
-    for(auto pa: phrases) {
+    for(auto pa: targetPhrases) {
       Hypothesis* prevHypo = hypo;
       // add sourceRange to coverage of previous Hypothesis
       const Bitmap &bitmap = bitmaps.GetBitmap(prevHypo->GetWordsBitmap(), pa.sourceRange);
@@ -139,14 +144,6 @@ public:
 
     return hypotheses;
   }
-
-  /*
-  const Hypothesis* firstHypo(Hypothesis *lastHypo) {
-    const Hypothesis* hypo;
-    for(hypo = lastHypo; hypo->GetPrevHypo() != NULL; hypo = hypo->GetPrevHypo());
-    return hypo;
-  }
-  */
 
   ~KenLMFixture() {
     delete m_lm;
@@ -198,137 +195,6 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   std::cout << "FF evaluated. Score: " << scoreBreakdown.GetScoreForProducer(&ff) << std::endl;
 
   // Moses::Factor::GetId() segfault.
-}
-
-BOOST_FIXTURE_TEST_CASE(TestHypothesis, KenLMFixture) {
-  std::vector<std::string> phraseStrings;
-  std::vector<Phrase> phrases;
-
-  Phrase phrase; // XX
-  float fullScore, ngramScore;
-  size_t oovCount;
-
-  // dream up some target phrase sequence
-  phraseStrings.push_back("john");
-  phraseStrings.push_back("gave");
-  phraseStrings.push_back("mary");
-  phraseStrings.push_back("a book");
-  phraseStrings.push_back(".");
-
-  // create the Phrase objects
-  for(auto s: phraseStrings) {
-    phrases.push_back(Phrase());
-    phrases.back().CreateFromString(Output, m_factorOrder, s, /* lhs = */ NULL);
-  }
-
-  std::cout << "created Phrase objects" << std::endl;
-
-  Sentence sentence; //(0, "john gave mary a book .", opts, &m_factorOrder);
-  sentence.CreateFromString(m_factorOrder, "john gave mary a book .");
-
-  std::cout << "created Sentence object from string" << std::endl;
-
-  //const InputType &sentence = *static_cast<const InputType *>(NULL);
-  TranslationOption initialTransOpt;
-  Bitmap initialBitmap(sentence.GetSize());
-  Hypothesis *empty = new Hypothesis(*static_cast<Manager *>(NULL), sentence, initialTransOpt, initialBitmap, /* id = */ 1);
-
-  std::cout << "created Hypothesis" << std::endl;
-
-  /////////////////////////////////////////
-  /////////////////////////////////////////
-
-  std::string query = "<s> john gave mary a book . </s>";
-
-  // split a string into tokens (in Phrase), and tokens into factors (in Word)
-  phrase.CreateFromString(Input, m_factorOrder, query, /* lhs = */ NULL); // lhs is NT label for syntax rules only
-
-  // CalcScore() computes Phrase score without an implicit <s> at the beginning
-  m_lm->CalcScore(phrase, fullScore, ngramScore, oovCount);
-
-  BOOST_CHECK(oovCount == 1); // "gave" is OOV in the query
-
-  /*
-   * at each fallback to unigram, backoff of previous word is applied.
-   *
-   * john=13 2 -1.255
-   * gave=0  1 -1.832
-   * mary=6  1 -1.531  // log p_b(mary) = -0.2
-   * a=8     1 -1.455  // -0.2 backoff applied here
-   * book=3  2 -1.243
-   * .=5     2 -1.243
-   * </s>=12 2 -0.954
-   * Total:    -9.513 OOV: 1  (log_10 scores)
-   */
-  const float expectedScore = -9.513f * logf(10.0f);
-  BOOST_CHECK_CLOSE(fullScore, expectedScore, TOLERANCE);
-
-  // for bigram LM, fullScore == ngramScore, since log P(<s>)=0
-  BOOST_CHECK_CLOSE(ngramScore, expectedScore, TOLERANCE);
-}
-
-/**
- * Test CalcScore() up to "mary", to see that -0.2 backoff is only applied at "a".
- */
-BOOST_FIXTURE_TEST_CASE(TestCalcScoreBackoff, KenLMFixture) {
-  Phrase phrase;
-  float fullScore, ngramScore;
-  size_t oovCount;
-
-  std::string query = "<s> john gave mary";
-
-  // split a string into tokens (in Phrase), and tokens into factors (in Word)
-  phrase.CreateFromString(Input, m_factorOrder, query, /* lhs = */ NULL); // lhs is NT label for syntax rules only
-
-  // CalcScore() computes Phrase score without an implicit <s> at the beginning
-  m_lm->CalcScore(phrase, fullScore, ngramScore, oovCount);
-
-  BOOST_CHECK(oovCount == 1); // "gave" is OOV in the query
-
-  /*
-   * at each fallback to unigram, backoff of previous word is applied.
-   *
-   * john=13 2 -1.255
-   * gave=0  1 -1.832
-   * mary=6  1 -1.531  // log p_b(mary) = -0.2, but not applied yet.
-   * Total:    -4.618 OOV: 1  (log_10 scores)
-   */
-  const float expectedScore = -4.618f * logf(10.0f);
-  BOOST_CHECK_CLOSE(fullScore, expectedScore, TOLERANCE);
-  BOOST_CHECK_CLOSE(ngramScore, expectedScore, TOLERANCE);
-
-  // TODO: with a trigram LM, we could test the subtle difference between ...
-  // * sentence-start low-order n-grams,  -- no backoff applied
-  // * low-order n-grams due to backoff
-}
-
-/**
- * Test ngramScore returned by CalcScore()
- */
-BOOST_FIXTURE_TEST_CASE(TestCalcScoreNgram, KenLMFixture) {
-  Phrase phrase;
-  float fullScore, ngramScore;
-  size_t oovCount;
-
-  std::string query = "a book";
-
-  // split a string into tokens (in Phrase), and tokens into factors (in Word)
-  phrase.CreateFromString(Input, m_factorOrder, query, /* lhs = */ NULL); // lhs is NT label for syntax rules only
-
-  // CalcScore() computes Phrase score without an implicit <s> at the beginning
-  m_lm->CalcScore(phrase, fullScore, ngramScore, oovCount);
-
-  /*
-   * a=8     1 -1.255
-   * book=3  2 -1.243
-   * Total:    -2.498 OOV: 0  (log_10 scores)
-   *
-   * ngramScore -1.243 (excludes the first order-1 tokens)
-   */
-  BOOST_CHECK_CLOSE(fullScore, -2.498f * logf(10.0f), TOLERANCE);
-  BOOST_CHECK_CLOSE(ngramScore, -1.243f * logf(10.0f), TOLERANCE);
-
-  BOOST_CHECK(oovCount == 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
