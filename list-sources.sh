@@ -27,7 +27,42 @@ if [ "$(basename $0)" == "g++" ]; then
 
 	# invoke real g++
 	$ORIG_CPP "$@"
-	exit $?
+	result=$?
+
+	# create list of headers...
+	if [ ! -z "$has_src" ]; then
+		headers=$LIST_TMP_DIR/headers/$source_file
+		if [ ! -e $headers ]; then
+			mkdir -p $(dirname $headers) || exit 1
+			# with -M, gcc outputs a list of dependencies for the given source file.
+			#ls -1 2>&- $($ORIG_CPP -M "$@") > $headers
+
+			#print command...
+			#echo $ORIG_CPP -M "$@" > $headers
+
+			# get rid of -o output.o
+			arglist=""
+			while [[ $# > 0 ]] ; do
+				if [ "$1" == "-o" ]; then
+					# skip -o argument
+					shift
+				else
+					arglist="$arglist \"$1\""
+				fi
+				shift
+			done
+			#ls -1 2>&- $($ORIG_CPP -M "$arglist") > $headers
+			#echo $ORIG_CPP -M $arglist > $headers
+			eval $ORIG_CPP -M $arglist | xargs ls -1 2>&- >> $headers
+
+			# post-process a bit (remove /usr)
+			sed '/^\/usr/d' $headers > ${headers}.nousr
+
+			# note: always has the cpp itself.
+		fi
+	fi
+
+	exit $result
 else
 	# we are coordinating bjam wrapper
 	export LIST_TMP_DIR=/tmp/list-sources.$$
