@@ -71,6 +71,8 @@ BOOST_AUTO_TEST_SUITE(LMTestHypothesisSuite)
  *
  * * ScoreComponentCollection
  *     registration of LM feature function to obtain FFIndex (index into SCC: index, numScoreComponents)
+ * * StatefulFeatureFunction
+ *     registration of LM feature function to obtain EmptyHypothesisState() in Hypothesis constructor
  * * FactorCollection
  *     creation of globally-unique word IDs at LM loading time
  * * StaticData
@@ -102,7 +104,8 @@ public:
     m_lm = new LanguageModelKen<lm::ngram::ProbingModel>(line, file, factorType, lazy);
   }
 
-  Hypothesis* hypoChain(const Sentence& source, const std::vector<PhraseAlign>& phrases) {
+  std::vector<Hypothesis *> hypoChain(const Sentence& source, const std::vector<PhraseAlign>& phrases) {
+    std::vector<Hypothesis *> hypotheses;
     Hypothesis *hypo = NULL;
     size_t nhypo = 0;
 
@@ -113,7 +116,11 @@ public:
     TranslationOption initialTransOpt;
 
     const Bitmap &initialBitmap = bitmaps.GetInitialBitmap();
+
+    // this uses static registry of FFs from StatefulFeatureFunction::GetStatefulFeatureFunctions()
+    // to obtain EmptyHypothesisState() of the LM.
     hypo = new Hypothesis(noMan, source, initialTransOpt, initialBitmap, /* id = */ ++nhypo);
+    hypotheses.push_back(hypo);
 
     for(auto pa: phrases) {
       Hypothesis* prevHypo = hypo;
@@ -125,11 +132,21 @@ public:
 
       TranslationOption *translationOption = new TranslationOption(pa.sourceRange, targetPhrase);
 
+      // these have NULL as FFState until we actually compute state
       hypo = new Hypothesis(*prevHypo, *translationOption, bitmap, /* id = */ ++nhypo);
+      hypotheses.push_back(hypo);
     }
 
+    return hypotheses;
+  }
+
+  /*
+  const Hypothesis* firstHypo(Hypothesis *lastHypo) {
+    const Hypothesis* hypo;
+    for(hypo = lastHypo; hypo->GetPrevHypo() != NULL; hypo = hypo->GetPrevHypo());
     return hypo;
   }
+  */
 
   ~KenLMFixture() {
     delete m_lm;
@@ -153,12 +170,12 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   phrases.push_back(PhraseAlign("a book", Range(3, 4)));
   phrases.push_back(PhraseAlign(".", Range(5, 5)));
 
-  Hypothesis *lastHypo = hypoChain(source, phrases);
+  std::vector<Hypothesis *> hypotheses = hypoChain(source, phrases);
 
   std::cout << "created Hypothesis chain" << std::endl;
 
   /*
-   * Evaluate feature function
+   * Evaluate feature function on hypotheses.
    */
   const StatefulFeatureFunction &ff = *m_lm;
   // SCC registration done in LanguageModel constructor. Only once - static!
@@ -167,7 +184,12 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   ScoreComponentCollection scoreBreakdown;
 
   // ffIndex is usually from the order of registration in StatefulFeatureFunction
+  // (this is NOT the index of FF into ScoreComponentCollection!!!)
   const size_t ffIndex = 0;
+
+  // this is how to evaluate a single Hypothesis, see Hypothesis::EvaluateWhenApplied(float estimatedScore)
+
+  Hypothesis *lastHypo = hypotheses.back();
   FFState const* prevState = lastHypo->GetPrevHypo() ? lastHypo->GetPrevHypo()->GetFFState(ffIndex) : NULL;
   FFState *curState = ff.EvaluateWhenApplied(*lastHypo, prevState, &scoreBreakdown);
   lastHypo->SetFFState(ffIndex, curState);
