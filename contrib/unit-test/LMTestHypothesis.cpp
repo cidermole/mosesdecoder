@@ -123,9 +123,9 @@ public:
       TargetPhrase targetPhrase;
       targetPhrase.CreateFromString(Input, m_factorOrder, pa.targetWords, NULL);
 
-      TranslationOption translationOption(pa.sourceRange, targetPhrase);
+      TranslationOption *translationOption = new TranslationOption(pa.sourceRange, targetPhrase);
 
-      hypo = new Hypothesis(*prevHypo, translationOption, bitmap, /* id = */ ++nhypo);
+      hypo = new Hypothesis(*prevHypo, *translationOption, bitmap, /* id = */ ++nhypo);
     }
 
     return hypo;
