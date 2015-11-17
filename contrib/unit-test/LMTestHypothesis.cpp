@@ -25,6 +25,7 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include <list>
 #include <utility>
 
 #include "moses/LM/Ken.h"
@@ -167,7 +168,8 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   phrases.push_back(PhraseAlign("a book", Range(3, 4)));
   phrases.push_back(PhraseAlign(".", Range(5, 5)));
 
-  std::vector<Hypothesis *> hypotheses = hypoChain(source, phrases);
+  std::vector<Hypothesis *> my_hypotheses = hypoChain(source, phrases);
+  std::list<Hypothesis *> hypotheses(my_hypotheses.begin(), my_hypotheses.end());
 
   std::cout << "created Hypothesis chain" << std::endl;
 
@@ -185,14 +187,48 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   const size_t ffIndex = 0;
 
   // this is how to evaluate a single Hypothesis, see Hypothesis::EvaluateWhenApplied(float estimatedScore)
-
+  // however, we need to process from left to right, so we have a state at every point. KenLM always requires state.
+  /*
   Hypothesis *lastHypo = hypotheses.back();
   FFState const* prevState = lastHypo->GetPrevHypo() ? lastHypo->GetPrevHypo()->GetFFState(ffIndex) : NULL;
   FFState *curState = ff.EvaluateWhenApplied(*lastHypo, prevState, &scoreBreakdown);
   lastHypo->SetFFState(ffIndex, curState);
+  */
 
-  // what happens if no state for previous Hypothesis computed yet?
-  std::cout << "FF evaluated. Score: " << scoreBreakdown.GetScoreForProducer(&ff) << std::endl;
+  hypotheses.pop_front(); // remove empty hypothesis, which we will not score
+  size_t i = 1;
+  float cur, prev = 0.0;
+  for(auto hypo: hypotheses) {
+    FFState const* prevState = hypo->GetPrevHypo() ? hypo->GetPrevHypo()->GetFFState(ffIndex) : NULL;
+    BOOST_CHECK(prevState != NULL);
+
+    FFState *curState = ff.EvaluateWhenApplied(*hypo, prevState, &scoreBreakdown);
+    cur = scoreBreakdown.GetScoreForProducer(&ff) / logf(10.0f);
+
+    std::cout << "log_10 score after hypo "
+              << i++ << " \"" << dynamic_cast<const Phrase &>(hypo->GetCurrTargetPhrase()).ToString() << "\": "
+              << (cur - prev) << " partial sum: " << cur << std::endl;
+    hypo->SetFFState(ffIndex, curState);
+    prev = cur;
+  }
+
+  /*
+   * at each fallback to unigram, backoff of previous word is applied.
+   *
+   * john=13 2 -1.255
+   * gave=0  1 -1.832
+   * mary=6  1 -1.531  // log p_b(mary) = -0.2
+   * a=8     1 -1.455  // -0.2 backoff applied here
+   * book=3  2 -1.243
+   * .=5     2 -1.243
+   * </s>=12 2 -0.954
+   * Total:    -9.513 OOV: 1  (log_10 scores)
+   */
+
+  std::cout << "FF evaluated. log_10 score: " << (scoreBreakdown.GetScoreForProducer(&ff) / logf(10.0f)) << std::endl;
+
+  // TODO: bigram fail at hypo 4 "a book ", only unigram prob for "a" added???
+  // TODO: final state </s> missing.
 
   // Moses::Factor::GetId() segfault.
 }
