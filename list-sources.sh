@@ -21,11 +21,17 @@ function source_stats() {
 
 	pushd $LIST_TMP_DIR/headers >/dev/null
 	while read header; do
-		nusages=$(grep -rl $header . | wc -l)
+		header_users=$LIST_TMP_DIR/header-users/$header
+		mkdir -p $(dirname $header_users)
+
+		# find the source files using this header
+		grep -rl $header . | cut -c 3- > $header_users
+		nusages=$(cat $header_users | wc -l)
 		echo "$nusages $header"
 	done < $LIST_TMP_DIR/headers.txt > $LIST_TMP_DIR/header-usage.txt
 	popd >/dev/null
 
+	# sort descending by usage count
 	sort -n -r $LIST_TMP_DIR/header-usage.txt > $LIST_TMP_DIR/header-usage.sorted.txt
 	mv $LIST_TMP_DIR/header-usage.sorted.txt $LIST_TMP_DIR/header-usage.txt
 }
