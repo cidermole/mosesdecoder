@@ -123,7 +123,7 @@ public:
     TranslationOption *initialTransOpt = new TranslationOption();
 
     const Bitmap &initialBitmap = bitmaps.GetInitialBitmap();
-    std::cout << "initialBitmap: " << initialBitmap << " " << &initialBitmap << std::endl;
+    //std::cout << "initialBitmap: " << initialBitmap << " " << &initialBitmap << std::endl;
 
     // this uses static registry of FFs from StatefulFeatureFunction::GetStatefulFeatureFunctions()
     // to obtain EmptyHypothesisState() of the LM.
@@ -134,10 +134,17 @@ public:
       Hypothesis* prevHypo = hypo;
       // add sourceRange to coverage of previous Hypothesis
       const Bitmap &bitmap = bitmaps.GetBitmap(prevHypo->GetWordsBitmap(), pa.sourceRange);
-      std::cout << " loop bitmap: " << bitmap << " " << &bitmap << std::endl;
+      //std::cout << " loop bitmap: " << bitmap << " " << &bitmap << std::endl;
 
       TargetPhrase targetPhrase;
       targetPhrase.CreateFromString(Input, m_factorOrder, pa.targetWords, NULL);
+
+      // prepare phrase-internal LM scores (futureScore, estimatedScore)
+      //targetPhrase.EvaluateInIsolation(/*src = */ *static_cast<Phrase *>(NULL), FeatureFunction::GetFeatureFunctions());
+
+      // TODO: above call uses m_scoreBreakdown.GetWeightedScore(), which doesn't have FVector prepared, (and neither has weights...)
+      // it's not even going to help, since we need to estimate future scores first. :(
+      // how are actual, final model scores computed for printing them? Do they not include phrases' internal LM probs?
 
       TranslationOption *translationOption = new TranslationOption(pa.sourceRange, targetPhrase);
 
@@ -215,6 +222,8 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
     prev = cur;
   }
 
+  float score = scoreBreakdown.GetScoreForProducer(&ff);
+
   /*
    * at each fallback to unigram, backoff of previous word is applied.
    *
@@ -228,13 +237,15 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
    * Total:    -9.513 OOV: 1  (log_10 scores)
    */
 
-  std::cout << "FF evaluated. log_10 score: " << (scoreBreakdown.GetScoreForProducer(&ff) / logf(10.0f)) << std::endl;
+  std::cout << "FF evaluated. log_10 score: " << (score / logf(10.0f)) << std::endl;
 
   // TODO: bigram fail at hypo 4 "a book ", only unigram prob for "a" added???
   // note: bigram P(book|a) fits completely in hypothesis. Maybe this is part of stateless score / "future"?
 
-  std::cout << hypotheses.back()->GetWordsBitmap() << std::endl;
+  //std::cout << hypotheses.back()->GetWordsBitmap() << std::endl;
   BOOST_CHECK(hypotheses.back()->IsSourceCompleted());
+
+  BOOST_CHECK_CLOSE(score, -9.513f * logf(10.0f), TOLERANCE);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
