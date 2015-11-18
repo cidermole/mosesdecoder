@@ -117,21 +117,24 @@ public:
     // vector<bool> source.m_sourceCompleted
     // source words already covered before we even got started. Why would anybody want to specify these?
     BOOST_CHECK(source.m_sourceCompleted.empty());
-    Bitmaps bitmaps(source.GetSize(), source.m_sourceCompleted);
+    Bitmaps* pbitmaps = new Bitmaps(source.GetSize(), source.m_sourceCompleted);
+    Bitmaps& bitmaps = *pbitmaps;
     Manager &noMan = *static_cast<Manager *>(NULL);
-    TranslationOption initialTransOpt;
+    TranslationOption *initialTransOpt = new TranslationOption();
 
     const Bitmap &initialBitmap = bitmaps.GetInitialBitmap();
+    std::cout << "initialBitmap: " << initialBitmap << " " << &initialBitmap << std::endl;
 
     // this uses static registry of FFs from StatefulFeatureFunction::GetStatefulFeatureFunctions()
     // to obtain EmptyHypothesisState() of the LM.
-    hypo = new Hypothesis(noMan, source, initialTransOpt, initialBitmap, /* id = */ ++nhypo);
+    hypo = new Hypothesis(noMan, source, *initialTransOpt, initialBitmap, /* id = */ ++nhypo);
     hypotheses.push_back(hypo);
 
     for(auto pa: targetPhrases) {
       Hypothesis* prevHypo = hypo;
       // add sourceRange to coverage of previous Hypothesis
       const Bitmap &bitmap = bitmaps.GetBitmap(prevHypo->GetWordsBitmap(), pa.sourceRange);
+      std::cout << " loop bitmap: " << bitmap << " " << &bitmap << std::endl;
 
       TargetPhrase targetPhrase;
       targetPhrase.CreateFromString(Input, m_factorOrder, pa.targetWords, NULL);
@@ -228,9 +231,10 @@ BOOST_FIXTURE_TEST_CASE(TestHypothesisChain, KenLMFixture) {
   std::cout << "FF evaluated. log_10 score: " << (scoreBreakdown.GetScoreForProducer(&ff) / logf(10.0f)) << std::endl;
 
   // TODO: bigram fail at hypo 4 "a book ", only unigram prob for "a" added???
-  // TODO: final state </s> missing.
+  // note: bigram P(book|a) fits completely in hypothesis. Maybe this is part of stateless score / "future"?
 
-  // Moses::Factor::GetId() segfault.
+  std::cout << hypotheses.back()->GetWordsBitmap() << std::endl;
+  BOOST_CHECK(hypotheses.back()->IsSourceCompleted());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
