@@ -1157,7 +1157,7 @@ sub define_step {
             &define_training_run_giza_inverse($i);
         }
         elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):symmetrize-giza$/) {
-            &define_training_symmetrize_giza($i);
+            &define_training_symmetrize_giza($i,$1);
         }
 	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-biconcor$/) {
             &define_training_build_biconcor($i);
@@ -1170,13 +1170,13 @@ sub define_step {
             &define_training_build_lex_trans($i);
         }
         elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):extract-phrases$/) {
-            &define_training_extract_phrases($i);
+            &define_training_extract_phrases($i,$1);
         }
         elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-reordering$/) {
             &define_training_build_reordering($i);
         }
 	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-ttable$/) {
-	    &define_training_build_ttable($i);
+	    &define_training_build_ttable($i,$1);
         }
         elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-transliteration-model$/) {
             &define_training_build_transliteration_model($i);
@@ -2234,12 +2234,12 @@ sub define_training_run_giza_inverse {
 }
 
 sub define_training_symmetrize_giza {
-    my ($step_id) = @_;
+    my ($step_id,$set) = @_;
 
     my ($aligned, $giza,$giza_inv) = &get_output_and_input($step_id);
     my $method = &check_and_get("TRAINING:alignment-symmetrization-method");
     my $cmd = &get_training_setting(3);
-    my $alignment_stem = &versionize(&long_file_name("aligned","model",""));
+    my $alignment_stem = &versionize(&long_file_name("aligned","model",$set));
 
     $cmd .= "-giza-e2f $giza -giza-f2e $giza_inv ";
     $cmd .= "-alignment-file $aligned ";
@@ -2333,11 +2333,11 @@ sub define_training_build_transliteration_model {
 }
 
 sub define_training_extract_phrases {
-    my ($step_id) = @_;
+    my ($step_id,$set) = @_;
 
     my ($extract, $aligned,$corpus) = &get_output_and_input($step_id);
     my $cmd = &get_training_setting(5);
-    my $alignment_stem = &versionize(&long_file_name("aligned","model",""));
+    my $alignment_stem = &versionize(&long_file_name("aligned","model",$set));
     $alignment_stem = $CONFIG{"TRAINING:word-alignment"}[0] if defined($CONFIG{"TRAINING:word-alignment"});
 
     $cmd .= "-alignment-file $aligned ";
@@ -2349,18 +2349,18 @@ sub define_training_extract_phrases {
       my $no_glue_grammar = &get("TRAINING:no-glue-grammar");
       if (!defined($no_glue_grammar) || $no_glue_grammar eq "false") {
         my $glue_grammar_file = &get("TRAINING:glue-grammar");
-        $glue_grammar_file = &versionize(&long_file_name("glue-grammar","model",""))
+        $glue_grammar_file = &versionize(&long_file_name("glue-grammar","model",$set))
           unless $glue_grammar_file;
         $cmd .= "-glue-grammar-file $glue_grammar_file ";
       }
 
       if (&get("GENERAL:output-parser") && (&get("TRAINING:use-unknown-word-labels") || &get("TRAINING:use-unknown-word-soft-matches"))) {
-        my $unknown_word_label = &versionize(&long_file_name("unknown-word-label","model",""));
+        my $unknown_word_label = &versionize(&long_file_name("unknown-word-label","model",$set));
         $cmd .= "-unknown-word-label $unknown_word_label ";
       }
 
       if (&get("GENERAL:output-parser") && &get("TRAINING:use-unknown-word-soft-matches")) {
-          my $unknown_word_soft_matches = &versionize(&long_file_name("unknown-word-soft-matches","model",""));
+          my $unknown_word_soft_matches = &versionize(&long_file_name("unknown-word-soft-matches","model",$set));
           $cmd .= "-unknown-word-soft-matches $unknown_word_soft_matches ";
       }
 
@@ -2374,19 +2374,19 @@ sub define_training_extract_phrases {
 
       if (&get("TRAINING:ghkm-phrase-orientation")) {
         $cmd .= "-ghkm-phrase-orientation ";
-        my $phrase_orientation_priors_file = &versionize(&long_file_name("phrase-orientation-priors","model",""));
+        my $phrase_orientation_priors_file = &versionize(&long_file_name("phrase-orientation-priors","model",$set));
         $cmd .= "-phrase-orientation-priors-file $phrase_orientation_priors_file ";
       }
 
       if (&get("TRAINING:ghkm-source-labels")) {
         $cmd .= "-ghkm-source-labels ";
-        my $source_labels_file = &versionize(&long_file_name("source-labels","model",""));
+        my $source_labels_file = &versionize(&long_file_name("source-labels","model",$set));
         $cmd .= "-ghkm-source-labels-file $source_labels_file ";
       }
 
       if (&get("TRAINING:ghkm-parts-of-speech")) {
         $cmd .= "-ghkm-parts-of-speech ";
-        my $parts_of_speech_labels_file = &versionize(&long_file_name("parts-of-speech","model",""));
+        my $parts_of_speech_labels_file = &versionize(&long_file_name("parts-of-speech","model",$set));
         $cmd .= "-ghkm-parts-of-speech-file $parts_of_speech_labels_file ";
       }
 
@@ -2410,7 +2410,7 @@ sub define_training_extract_phrases {
 }
 
 sub define_training_build_ttable {
-    my ($step_id) = @_;
+    my ($step_id,$set) = @_;
 
     my ($phrase_table, $extract,$lex,$domains) = &get_output_and_input($step_id);
     my $word_report = &backoff_and_get("EVALUATION:report-precision-by-coverage");
@@ -2433,19 +2433,19 @@ sub define_training_build_ttable {
 
       if (&get("TRAINING:ghkm-phrase-orientation")) {
         $cmd .= "-ghkm-phrase-orientation ";
-        my $phrase_orientation_priors_file = &versionize(&long_file_name("phrase-orientation-priors","model",""));
+        my $phrase_orientation_priors_file = &versionize(&long_file_name("phrase-orientation-priors","model",$set));
         $cmd .= "-phrase-orientation-priors-file $phrase_orientation_priors_file ";
       }
 
       if (&get("TRAINING:ghkm-source-labels")) {
         $cmd .= "-ghkm-source-labels ";
-        my $source_labels_file = &versionize(&long_file_name("source-labels","model",""));
+        my $source_labels_file = &versionize(&long_file_name("source-labels","model",$set));
         $cmd .= "-ghkm-source-labels-file $source_labels_file ";
       }
 
       if (&get("TRAINING:ghkm-parts-of-speech")) {
         $cmd .= "-ghkm-parts-of-speech ";
-        my $parts_of_speech_labels_file = &versionize(&long_file_name("parts-of-speech","model",""));
+        my $parts_of_speech_labels_file = &versionize(&long_file_name("parts-of-speech","model",$set));
         $cmd .= "-ghkm-parts-of-speech-file $parts_of_speech_labels_file ";
       }
     }
