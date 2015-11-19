@@ -523,9 +523,15 @@ train-in-mono
 	ignore-if: indomain-stem
 	default-name: mml/model
 	template: $moses-script-dir/ems/support/mml-train.perl -in-source IN -in-target IN1 -out-source IN2.$input-extension -out-target IN2.$output-extension -model OUT -lm-training "$lm-training" -order $order -lm-settings "$lm-settings" -lm-binarizer $lm-binarizer $settings
-[TRAINING] single
-consolidate
+[TRAINING] multiple
+consolidate-default
 	in: CORPUS:post-split-factorized-stem
+	out: corpus
+	ignore-if: corpus-parts-post-split-factorized-stem
+	default-name: corpus
+	template: $moses-script-dir/ems/support/consolidate-training-data.perl $input-extension $output-extension OUT IN
+consolidate-corpora
+	in: corpus-parts-post-split-factorized-stem
 	out: corpus
 	default-name: corpus
 	template: $moses-script-dir/ems/support/consolidate-training-data.perl $input-extension $output-extension OUT IN

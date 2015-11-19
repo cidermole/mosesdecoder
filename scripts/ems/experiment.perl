@@ -623,7 +623,7 @@ sub find_steps_for_module {
 		print "\t\tneeds input $in: " if $VERBOSE;
 		if(defined($CONFIG{$in}) && $CONFIG{$in}[0] =~ /^\[(.+)\]$/) {
 		    # multiple input, explicitly defined (example: LM:{europarl,nc}:lm )
-		    if ($CONFIG{$in}[0] =~ /^\[([^:]+):{(\S+)}:(\S+)\]$/) {
+		    if ($CONFIG{$in}[0] =~ /^\[([^:]+):\{(\S+)\}:(\S+)\]$/) {
 			my @SETS = split(',', $2);
 			foreach my $set (@SETS) {
 			    $in = &construct_name($1,$set,$3);
@@ -1144,51 +1144,51 @@ sub define_step {
   elsif ($DO_STEP[$i] =~ /^LM:(.+):train-nplm$/) {
       &define_lm_train_nplm($i,$1);
   }
-        elsif ($DO_STEP[$i] eq 'TRAINING:prepare-data') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):prepare-data$/) {
             &define_training_prepare_data($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:prepare-data-fast-align') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):prepare-data-fast-align$/) {
             &define_training_prepare_data_fast_align($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:run-giza') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):run-giza$/) {
             &define_training_run_giza($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:run-giza-inverse') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):run-giza-inverse$/) {
             &define_training_run_giza_inverse($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:symmetrize-giza') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):symmetrize-giza$/) {
             &define_training_symmetrize_giza($i);
         }
-	elsif ($DO_STEP[$i] eq 'TRAINING:build-biconcor') {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-biconcor$/) {
             &define_training_build_biconcor($i);
 	}
-	elsif ($DO_STEP[$i] eq 'TRAINING:build-suffix-array') {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-suffix-array$/) {
             &define_training_build_suffix_array($i);
 	}
 
-        elsif ($DO_STEP[$i] eq 'TRAINING:build-lex-trans') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-lex-trans$/) {
             &define_training_build_lex_trans($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:extract-phrases') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):extract-phrases$/) {
             &define_training_extract_phrases($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:build-reordering') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-reordering$/) {
             &define_training_build_reordering($i);
         }
-	elsif ($DO_STEP[$i] eq 'TRAINING:build-ttable') {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-ttable$/) {
 	    &define_training_build_ttable($i);
         }
-        elsif ($DO_STEP[$i] eq 'TRAINING:build-transliteration-model') {
+        elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-transliteration-model$/) {
             &define_training_build_transliteration_model($i);
         }
-	elsif ($DO_STEP[$i] eq 'TRAINING:build-generation') {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-generation$/) {
             &define_training_build_generation($i);
         }
-	elsif ($DO_STEP[$i] eq 'TRAINING:sigtest-filter-ttable' ||
-	       $DO_STEP[$i] eq 'TRAINING:sigtest-filter-reordering') {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):sigtest-filter-ttable$/ ||
+	       $DO_STEP[$i] =~ /^TRAINING:(.+):sigtest-filter-reordering$/) {
             &define_training_sigtest_filter($i);
         }
-	elsif ($DO_STEP[$i] eq 'TRAINING:create-config' || $DO_STEP[$i] eq 'TRAINING:create-config-interpolated-lm') {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):create-config$/ || $DO_STEP[$i] =~ /^TRAINING:(.+):create-config-interpolated-lm$/) {
 	    &define_training_create_config($i);
 	}
 	elsif ($DO_STEP[$i] =~ /^INTERPOLATED-LM:(post-split-)?factorize-tuning$/) {
