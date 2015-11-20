@@ -40,7 +40,9 @@ void Manager::OutputBest(OutputCollector *collector) const
                    "Output phrase should have contained at least 2 words (beginning and end-of-sentence)");
     yield.RemoveWord(0);
     yield.RemoveWord(yield.GetSize()-1);
-    out << yield.GetStringRep(StaticData::Instance().GetOutputFactorOrder());
+    std::string translation = yield.GetStringRep(StaticData::Instance().GetOutputFactorOrder());
+    VERBOSE(1,"BEST TRANSLATION: " << translation << " [total=" << best->label.futureScore << "]" << std::endl);
+    out << translation;
     out << '\n';
   }
   collector->Write(m_source.GetTranslationId(), out.str());
