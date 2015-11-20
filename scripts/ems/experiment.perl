@@ -1184,8 +1184,8 @@ sub define_step {
 	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):build-generation$/) {
             &define_training_build_generation($i);
         }
-	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):sigtest-filter-ttable$/ ||
-	       $DO_STEP[$i] =~ /^TRAINING:(.+):sigtest-filter-reordering$/) {
+	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):(bypass-)?sigtest-filter-ttable$/ ||
+	       $DO_STEP[$i] =~ /^TRAINING:(.+):(bypass-)?sigtest-filter-reordering$/) {
             &define_training_sigtest_filter($i);
         }
 	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):create-config$/ || $DO_STEP[$i] =~ /^TRAINING:(.+):create-config-interpolated-lm$/) {
@@ -2530,7 +2530,13 @@ sub define_training_sigtest_filter {
     $raw_table =~ s/\s*\-\S+\s*//; # remove switch
     $filtered_table =~ s/\s*\-\S+\s*//;
 
-    my $cmd = "zcat $raw_table.gz | $moses_src_dir/contrib/sigtest-filter/filter-pt -e $suffix_array.$output_extension -f $suffix_array.$input_extension $sigtest_filter $hierarchical_flag | gzip - > $filtered_table.gz\n";
+    my $cmd = "";
+    if($sigtest_filter) {
+        $cmd = "zcat $raw_table.gz | $moses_src_dir/contrib/sigtest-filter/filter-pt -e $suffix_array.$output_extension -f $suffix_array.$input_extension $sigtest_filter $hierarchical_flag | gzip - > $filtered_table.gz\n";
+    } else {
+        # bypass: skip filtering while actually creating output file.
+        $cmd = "ln -s $raw_table.gz $filtered_table.gz\n";
+    }
     &create_step($step_id,$cmd);
 }
 
