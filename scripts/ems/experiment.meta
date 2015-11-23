@@ -786,27 +786,27 @@ sigtest-filter-ttable
 	out: sigtest-filter-phrase-translation-table
 	default-name: model/phrase-table-sigtest-filter
 	pass-unless: sigtest-filter
-	ignore-if: TRAINING:config custom-phrase-table-pruning
+	ignore-if: CONFIG:config custom-phrase-table-pruning
 	final-model: yes
 sigtest-filter-reordering
 	in: reordering-table sigtest-filter-suffix-array
 	out: sigtest-filter-reordering-table
 	default-name: model/reordering-table-sigtest-filter
 	pass-unless: sigtest-filter
-	ignore-if: TRAINING:config
+	ignore-if: CONFIG:config
 	ignore-unless: lexicalized-reordering
 	final-model: yes
 bypass-sigtest-filter-ttable
 	in: phrase-translation-table sigtest-filter-suffix-array
 	out: sigtest-filter-phrase-translation-table
 	default-name: model/phrase-table-no-sigtest
-	ignore-if: TRAINING:config custom-phrase-table-pruning sigtest-filter
+	ignore-if: CONFIG:config custom-phrase-table-pruning sigtest-filter
 	final-model: yes
 bypass-sigtest-filter-reordering
 	in: reordering-table sigtest-filter-suffix-array
 	out: sigtest-filter-reordering-table
 	default-name: model/reordering-table-no-sigtest
-	ignore-if: TRAINING:config sigtest-filter
+	ignore-if: CONFIG:config sigtest-filter
 	ignore-unless: lexicalized-reordering
 	final-model: yes
 build-generation
@@ -839,23 +839,6 @@ build-sparse
 	rerun-on-change: sparse-features
         default-name: model/sparse-features
 	template: $moses-script-dir/ems/support/build-sparse-features.perl IN $input-extension $output-extension OUT "$sparse-features"
-create-config
-	in: sigtest-filter-reordering-table sigtest-filter-phrase-translation-table transliteration-table generation-table-pruned sparse corpus-mml-prefilter=OR=corpus-mml-postfilter=OR=domains osm-model INTERPOLATED-LM:binlm LM:binlm
-	out: config
-	ignore-if: use-hiero thot
-	rerun-on-change: decoding-steps alignment-factors translation-factors reordering-factors generation-factors lexicalized-reordering training-options script decoding-graph-backoff score-settings additional-ini mmsapt no-glue-grammar dont-tune-glue-grammar use-syntax-input-weight-feature
-	default-name: model/moses.ini
-	error: Unknown option
-	error: requires an argument
-	final-model: yes
-binarize-config
-	in: config
-	out: bin-config
-	pass-unless: binarize-all
-	rerun-on-change: config 
-	default-name: model/moses.bin.ini
-	template: $binarize-all IN OUT -Binarizer "$ttable-binarizer" 
-	final-model: yes
 hiero-compile-source-suffix-array
 	in: corpus-mml-postfilter=OR=corpus-mml-prefilter=OR=corpus
 	out: hiero-source-suffix-array
@@ -912,6 +895,41 @@ thot-create-config
 	ignore-unless: thot
 	default-name: model/thot.ini
 	template: $thot/thot_gen_cfg_file IN1/lm_desc IN/tm_desc > OUT
+
+[TM] single
+# our output is passed to train-model.perl, which detects gz compression (adds suffix)
+combine-phrase-tables
+	in: TRAINING:sigtest-filter-phrase-translation-table
+	out: phrase-translation-table
+	default-name: model/phrase-table-combined
+	pass-unless: combine-phrase-tables-script
+	template: $combine-phrase-tables-script IN | gzip > OUT.gz
+combine-reordering-tables
+	in: TRAINING:sigtest-filter-reordering-table
+	out: reordering-table-gz
+	default-name: model/reordering-table-combined
+	pass-unless: combine-phrase-tables-script
+	template: $combine-phrase-tables-script IN.wbe-${TRAINING:lexicalized-reordering} | gzip > OUT.wbe-${TRAINING:lexicalized-reordering}.gz
+
+[CONFIG] multiple
+create-config
+	in: TM:reordering-table-gz TM:phrase-translation-table TRAINING:transliteration-table TRAINING:generation-table-pruned TRAINING:sparse TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus-mml-postfilter=OR=TRAINING:domains TRAINING:osm-model INTERPOLATED-LM:binlm LM:binlm
+	out: config
+	ignore-if: TRAINING:use-hiero TRAINING:thot
+# TODO below add TRAINING: everywhere
+	rerun-on-change: decoding-steps alignment-factors translation-factors reordering-factors generation-factors lexicalized-reordering training-options script decoding-graph-backoff score-settings additional-ini mmsapt no-glue-grammar dont-tune-glue-grammar use-syntax-input-weight-feature
+	default-name: model/moses.ini
+	error: Unknown option
+	error: requires an argument
+	final-model: yes
+binarize-config
+	in: config
+	out: bin-config
+	pass-unless: binarize-all
+	rerun-on-change: config 
+	default-name: model/moses.bin.ini
+	template: $binarize-all IN OUT -Binarizer "$ttable-binarizer" 
+	final-model: yes
 
 [TUNING] single
 input-from-sgm
@@ -1158,35 +1176,35 @@ strip-reference-devtest
 	multiref: $moses-script-dir/ems/support/run-command-on-multiple-refsets.perl
 	template: $moses-script-dir/training/strip-xml.perl < IN > OUT && $moses-script-dir/training/wrappers/mosesxml2brackets.py < IN > OUT.trees
 filter
-	in: input TRAINING:sigtest-filter-phrase-translation-table TRAINING:sigtest-filter-reordering-table TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus-mml-postfilter=OR=TRAINING:domains TRAINING:transliteration-table
+	in: input TM:phrase-translation-table TM:reordering-table-gz TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus-mml-postfilter=OR=TRAINING:domains TRAINING:transliteration-table
 	out: filtered-dir
 	default-name: tuning/filtered
-	rerun-on-change: filter-settings ttable-binarizer TRAINING:no-glue-grammar TRAINING:dont-tune-glue-grammar TRAINING:use-syntax-input-weight-feature TRAINING:config
+	rerun-on-change: filter-settings ttable-binarizer TRAINING:no-glue-grammar TRAINING:dont-tune-glue-grammar TRAINING:use-syntax-input-weight-feature CONFIG:config
 	ignore-if: TRAINING:binarize-all
 	error: already exists. Please delete
 filter-devtest
-	in: input-devtest TRAINING:sigtest-filter-phrase-translation-table TRAINING:sigtest-filter-reordering-table
+	in: input-devtest TM:phrase-translation-table TM:reordering-table-gz
 	out: filtered-dir-devtest
 	default-name: tuning/filtered.devtest
-	rerun-on-change: filter-settings ttable-binarizer TRAINING:no-glue-grammar TRAINING:dont-tune-glue-grammar TRAINING:use-syntax-input-weight-feature TRAINING:config
+	rerun-on-change: filter-settings ttable-binarizer TRAINING:no-glue-grammar TRAINING:dont-tune-glue-grammar TRAINING:use-syntax-input-weight-feature CONFIG:config
 	ignore-if: TRAINING:binarize-all
 	ignore-unless: use-mira	
 	error: already exists. Please delete
 apply-filter
-	in: TRAINING:bin-config filtered-dir
+	in: CONFIG:bin-config filtered-dir
 	out: filtered-config
 	default-name: tuning/moses.filtered.ini
 	ignore-if: TRAINING:binarize-all
 	template: $moses-script-dir/ems/support/substitute-filtered-tables.perl IN1/moses.ini < IN > OUT
 apply-filter-devtest
-	in: TRAINING:bin-config filtered-dir-devtest
+	in: CONFIG:bin-config filtered-dir-devtest
 	out: filtered-config-devtest
 	default-name: tuning/moses.filtered.devtest.ini
 	pass-if: TRAINING:binarize-all
 	ignore-unless: use-mira
 	template: $moses-script-dir/ems/support/substitute-filtered-tables.perl IN1/moses.ini < IN > OUT
 tune
-	in: TRAINING:bin-config input reference filtered-config-devtest input-devtest reference-devtest filtered-config 
+	in: CONFIG:bin-config input reference filtered-config-devtest input-devtest reference-devtest filtered-config 
 	out: weight-config
 	ignore-if: use-hiero
 	qsub-script: yes
@@ -1196,14 +1214,14 @@ tune
 	rerun-on-change: decoder-settings tuning-settings nbest lambda async
 	not-error: trans: No such file or directory
 thot-tune
-	in: TRAINING:config input reference
+	in: CONFIG:config input reference
 	out: config-with-reused-weights
 	ignore-unless: thot
 	tmp-name: tuning/thot.tmp
 	default-name: tuning/thot.tuned.ini
 	template: mkdir -p TMP/home ; mkdir -p TMP/tdir ; mkdir -p TMP/sdir ; HOME=TMP/home $thot/thot_smt_tune -tdir TMP/tdir -sdir TMP/sdir -c IN -s IN1 -t IN2 -o OUT
 apply-weights
-	in: TRAINING:bin-config weight-config
+	in: CONFIG:bin-config weight-config
 	out: config-with-reused-weights
 	ignore-if: use-hiero thot
 	default-name: tuning/moses.tuned.ini
@@ -1301,15 +1319,15 @@ split-input
 	pass-unless: input-splitter
 	template: $input-splitter -model IN1.$input-extension < IN > OUT
 filter
-	in: input TRAINING:sigtest-filter-phrase-translation-table TRAINING:sigtest-filter-reordering-table TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus-mml-postfilter=OR=TRAINING:domains TRAINING:transliteration-table
+	in: input TM:phrase-translation-table TM:reordering-table-gz TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus-mml-postfilter=OR=TRAINING:domains TRAINING:transliteration-table
 	out: filtered-dir 
 	default-name: evaluation/filtered
-	rerun-on-change: filter-settings report-precision-by-coverage ttable-binarizer TRAINING:no-glue-grammar TRAINING:dont-tune-glue-grammar TRAINING:use-syntax-input-weight-feature TRAINING:config
+	rerun-on-change: filter-settings report-precision-by-coverage ttable-binarizer TRAINING:no-glue-grammar TRAINING:dont-tune-glue-grammar TRAINING:use-syntax-input-weight-feature CONFIG:config
 	pass-if: TRAINING:binarize-all
 	ignore-if: use-hiero
 	error: already exists. Please delete
 apply-filter
-	in: filtered-dir TRAINING:config TUNING:config-with-reused-weights
+	in: filtered-dir CONFIG:config TUNING:config-with-reused-weights
 	out: filtered-config
 	default-name: evaluation/filtered.ini
 	ignore-if: TRAINING:binarize-all thot
@@ -1542,14 +1560,14 @@ analysis
 	ignore-unless: analysis
 	rerun-on-change: analyze-search-graph
 analysis-coverage
-	in: input TRAINING:corpus-mml-postfilter=OR=TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus TRAINING:sigtest-filter-phrase-translation-table
+	in: input TRAINING:corpus-mml-postfilter=OR=TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus TM:phrase-translation-table
 	out: analysis-coverage
 	default-name: evaluation/analysis
 	ignore-unless: AND analysis analyze-coverage
 	rerun-on-change: score-settings
 	final-model: yes
 analysis-precision
-	in: recased-output reference input TRAINING:corpus-mml-postfilter=OR=TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus TRAINING:sigtest-filter-phrase-translation-table analysis-coverage
+	in: recased-output reference input TRAINING:corpus-mml-postfilter=OR=TRAINING:corpus-mml-prefilter=OR=TRAINING:corpus TM:phrase-translation-table analysis-coverage
 	out: analysis
 	default-name: evaluation/analysis
 	ignore-unless: AND analysis analyze-coverage report-precision-by-coverage

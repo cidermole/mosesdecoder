@@ -1188,7 +1188,7 @@ sub define_step {
 	       $DO_STEP[$i] =~ /^TRAINING:(.+):(bypass-)?sigtest-filter-reordering$/) {
             &define_training_sigtest_filter($i);
         }
-	elsif ($DO_STEP[$i] =~ /^TRAINING:(.+):create-config$/ || $DO_STEP[$i] =~ /^TRAINING:(.+):create-config-interpolated-lm$/) {
+	elsif ($DO_STEP[$i] =~ /^CONFIG:(.+):create-config$/ || $DO_STEP[$i] =~ /^TRAINING:(.+):create-config-interpolated-lm$/) {
 	    &define_training_create_config($i);
 	}
 	elsif ($DO_STEP[$i] =~ /^INTERPOLATED-LM:(post-split-)?factorize-tuning$/) {
