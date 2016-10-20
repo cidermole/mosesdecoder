@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <limits>
 #include <iostream>
+#include <type_traits>
 
 namespace Moses2
 {
@@ -241,6 +242,16 @@ public:
   MemPool &m_pool;
 protected:
 };
+
+template <class T, class U>
+bool operator==(const MemPoolAllocator<T>&, const MemPoolAllocator<U>&) {
+  return std::is_same<T, U>::value;
+}
+
+template <class T, class U>
+bool operator!=(const MemPoolAllocator<T>&, const MemPoolAllocator<U>&) {
+  return !std::is_same<T, U>::value;
+}
 
 }
 

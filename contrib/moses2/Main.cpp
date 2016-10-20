@@ -6,7 +6,9 @@
 #include "Phrase.h"
 #include "TranslationTask.h"
 #include "MemPool.h"
+#ifdef HAVE_XMLRPC_C
 #include "server/Server.h"
+#endif
 #include "legacy/InputFileStream.h"
 #include "legacy/Parameter.h"
 #include "legacy/ThreadPool.h"
@@ -58,11 +60,19 @@ int main(int argc, char** argv)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef HAVE_XMLRPC_C
 void run_as_server(Moses2::System &system)
 {
   Moses2::Server server(system.options.server, system);
   server.run(system); // actually: don't return. see Server::run()
 }
+#else
+void run_as_server(Moses2::System &system)
+{
+  throw std::runtime_error("moses was not compiled with xmlrpc, no server available");
+}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 istream &GetInputStream(Moses2::Parameter &params)

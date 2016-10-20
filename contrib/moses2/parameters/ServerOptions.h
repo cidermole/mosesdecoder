@@ -1,15 +1,9 @@
 // -*- mode: c++; indent-tabs-mode: nil; tab-width: 2 -*-
 #pragma once
 #include <string>
-#include <map>
-#include <stdint.h>
-#include <xmlrpc-c/base.hpp>
-#include <xmlrpc-c/registry.hpp>
-#include <xmlrpc-c/server_abyss.hpp>
-
+#include "moses/Parameter.h"
 namespace Moses2
 {
-class Parameter;
 
   struct 
   ServerOptions 
@@ -31,13 +25,6 @@ class Parameter;
     bool init(Parameter const& param);
     ServerOptions(Parameter const& param);
     ServerOptions();
-
-    bool
-    update(std::map<std::string,xmlrpc_c::value>const& params)
-    {
-      return true;
-    }
-
   };
 
 }
