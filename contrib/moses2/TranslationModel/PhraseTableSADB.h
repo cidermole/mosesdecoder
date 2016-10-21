@@ -73,7 +73,7 @@ namespace Moses2 {
     protected:
 
 #ifdef WITH_THREADS
-        boost::thread_specific_ptr<void> m_ttask;
+        //boost::thread_specific_ptr<void> m_ttask;
         boost::thread_specific_ptr<context_t> t_context_vec;
 #else
         boost::scoped_ptr<context_t> *t_context_vec;

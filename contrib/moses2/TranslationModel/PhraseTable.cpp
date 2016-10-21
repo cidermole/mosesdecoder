@@ -26,8 +26,8 @@ PhraseTable::PhraseTable(size_t startInd, const std::string &line) :
         , m_maxCacheSize(DEFAULT_MAX_TRANS_OPT_CACHE_SIZE)
 {
   m_input.push_back(0);
-
-  ReadParameters();
+  // do not call ReadParameters() here -- method calls from c'tor cannot be overridden
+  // instead, call it in the final child class's c'tor.
 }
 
 PhraseTable::~PhraseTable()
