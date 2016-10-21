@@ -5,6 +5,7 @@
 #include "../TranslationModel/ProbingPT/ProbingPT.h"
 #include "../TranslationModel/UnknownWordPenalty.h"
 #include "../TranslationModel/Transliteration.h"
+#include "../TranslationModel/PhraseTableSADB.h"
 
 #include "../LM/KENLM.h"
 #include "../LM/KENLMBatch.h"
@@ -52,6 +53,7 @@ FeatureRegistry::FeatureRegistry()
   // Feature with different name than class.
 #define MOSES_FNAME2(name, type) Add(name, new DefaultFeatureFactory< type >());
 
+  MOSES_FNAME2("PhraseDictionarySADB", PhraseTableSADB);
   MOSES_FNAME2("PhraseDictionaryCompact", PhraseTableCompact);
   MOSES_FNAME2("PhraseDictionaryMemory", PhraseTableMemory);
   MOSES_FNAME(ProbingPT);

@@ -12,6 +12,7 @@
 #include <vector>
 #include "../TypeDef.h"
 #include "../Phrase.h"
+#include <mmt/IncrementalModel.h>
 
 namespace Moses2
 {
@@ -108,6 +109,12 @@ public:
   // clean up temporary memory, called after processing each sentence
   virtual void CleanUpAfterSentenceProcessing() const
   {
+  }
+
+  //! returns the incremental model, if the feature allows incrementality
+  // returns NULL if the feature does not support incrementality
+  virtual mmt::IncrementalModel* GetIncrementalModel() const {
+    return NULL;
   }
 
 protected:

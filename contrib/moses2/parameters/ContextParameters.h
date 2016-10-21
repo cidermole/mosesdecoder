@@ -2,7 +2,6 @@
 #pragma once
 #include <string>
 #include "moses/TypeDef.h"
-#include "moses/Util.h"
 #include "OptionsBaseClass.h"
 
 namespace Moses2

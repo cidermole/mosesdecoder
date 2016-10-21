@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.2)
 project(moses2)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # Moses definitions
@@ -8,7 +10,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions(-DMAX_NUM_FACTORS=4 -DKENLM_MAX_ORDER=6 -DWITH_THREADS)
 
 include_directories(.)
-include_directories(../..)
+include_directories(legacy)
+#include_directories(../..)
 
 ## XMLRPC
 #find_package(XMLRPC REQUIRED)
@@ -24,6 +27,33 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 ## ZLIB
 find_package(ZLIB REQUIRED)
+
+if (USE_MMTILM)
+    find_package(ROCKSDB REQUIRED)
+    find_package(MMTCommons REQUIRED)
+    find_package(MMTILM REQUIRED)
+    add_definitions(-DLM_MMTILM=true)
+endif (USE_MMTILM)
+
+if (USE_SAPT)
+    find_package(ROCKSDB REQUIRED)
+    find_package(SAPT REQUIRED)
+    find_package(MMTCommons REQUIRED)
+    add_definitions(-DSAPT=true)
+endif (USE_SAPT)
+
+if (USE_MMTILM)
+    include_directories(${ROCKSDB_INCLUDE_DIRS})
+    include_directories(${MMTILM_INCLUDE_DIRS})
+    include_directories(${MMTCommons_INCLUDE_DIR})
+endif (USE_MMTILM)
+
+if (USE_SAPT)
+    include_directories(${ROCKSDB_INCLUDE_DIRS})
+    include_directories(${SAPT_INCLUDE_DIRS})
+    include_directories(${MMTCommons_INCLUDE_DIR})
+endif (USE_SAPT)
+
 
 set(SOURCE_FILES
 #    defer/CubePruningBitmapStack/Misc.cpp
@@ -331,6 +361,8 @@ set(SOURCE_FILES
     TranslationModel/ProbingPT/vocabid.hh
     TranslationModel/PhraseTable.cpp
     TranslationModel/PhraseTable.h
+    TranslationModel/PhraseTableSADB.cpp
+    TranslationModel/PhraseTableSADB.h
     TranslationModel/Transliteration.cpp
     TranslationModel/Transliteration.h
     TranslationModel/UnknownWordPenalty.cpp
@@ -394,3 +426,12 @@ target_link_libraries(moses2 pthread)
 #target_link_libraries(moses2 ${XMLRPC_LIBRARIES})
 target_link_libraries(moses2 ${Boost_LIBRARIES})
 target_link_libraries(moses2 ${ZLIB_LIBRARIES})
+
+if (USE_MMTILM)
+    target_link_libraries(moses2 ${ROCKSDB_LIBRARIES})
+    target_link_libraries(moses2 ${MMTILM_LIBRARIES})
+endif (USE_MMTILM)
+
+if (USE_SAPT)
+    target_link_libraries(moses2 ${SAPT_LIBRARIES})
+endif (USE_SAPT)
