@@ -119,6 +119,8 @@ void Manager::Init()
 		cerr << "Unknown search algorithm" << endl;
 		abort();
 	}
+
+	system.featureFunctions.InitializeForInput(*this);
 }
 
 void Manager::Decode()

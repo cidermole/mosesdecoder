@@ -210,10 +210,17 @@ void FeatureFunctions::EvaluateWhenAppliedBatch(const Batch &batch) const
   }
 }
 
+void FeatureFunctions::InitializeForInput(const Manager &mgr) const
+{
+  BOOST_FOREACH(const FeatureFunction *ff, m_featureFunctions) {
+    ff->InitializeForInput(mgr);
+  }
+}
+
 void FeatureFunctions::CleanUpAfterSentenceProcessing() const
 {
   BOOST_FOREACH(const FeatureFunction *ff, m_featureFunctions) {
-	ff->CleanUpAfterSentenceProcessing();
+	  ff->CleanUpAfterSentenceProcessing();
   }
 }
 

@@ -201,6 +201,8 @@ set(SOURCE_FILES
     LM/LanguageModel.h
 #    LM/LanguageModelDALM.cpp
 #    LM/LanguageModelDALM.h
+    LM/MMTInterpolatedLM.cpp
+    LM/MMTInterpolatedLM.h
     MorphoTrie/MorphTrie.h
     MorphoTrie/Node.h
     MorphoTrie/utils.h

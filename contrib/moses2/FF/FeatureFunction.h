@@ -25,6 +25,7 @@ class TargetPhrases;
 class TargetPhraseImpl;
 class Scores;
 class ManagerBase;
+class Manager;
 class MemPool;
 
 namespace SCFG
@@ -106,10 +107,10 @@ public:
   {
   }
 
+  virtual void InitializeForInput(const Manager &mgr) const {}
+
   // clean up temporary memory, called after processing each sentence
-  virtual void CleanUpAfterSentenceProcessing() const
-  {
-  }
+  virtual void CleanUpAfterSentenceProcessing() const {}
 
   //! returns the incremental model, if the feature allows incrementality
   // returns NULL if the feature does not support incrementality

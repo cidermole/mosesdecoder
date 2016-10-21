@@ -7,6 +7,7 @@
 #include "../TranslationModel/Transliteration.h"
 #include "../TranslationModel/PhraseTableSADB.h"
 
+#include "../LM/MMTInterpolatedLM.h"
 #include "../LM/KENLM.h"
 #include "../LM/KENLMBatch.h"
 #include "../LM/LanguageModel.h"
@@ -62,6 +63,7 @@ FeatureRegistry::FeatureRegistry()
 
   Add("KENLM", new KenFactory());
 
+  MOSES_FNAME2("MMTILM", MMTInterpolatedLM);
   MOSES_FNAME(KENLMBatch);
   MOSES_FNAME(GPULM);
 
